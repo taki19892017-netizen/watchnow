@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>ウォッチリスト</title>
+  <meta name="theme-color" content="#0e1117" />
+  <meta name="color-scheme" content="dark" />
+  <!-- iOS: ホーム画面アプリ用 -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ウォッチリスト" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">
+      <span class="logo">📈</span>
+      <span>ウォッチリスト</span>
+    </div>
+    <div class="actions">
+      <span id="updated" class="updated">—</span>
+      <button id="refresh" class="refresh-btn" title="更新" aria-label="更新">⟳</button>
+    </div>
+  </header>
+
+  <main id="list" class="list">
+    <div class="placeholder">読み込み中…</div>
+  </main>
+
+  <footer class="footer">
+    <span>データ: TradingView</span>
+    <label class="auto">
+      <input type="checkbox" id="autoToggle" checked />
+      自動更新（30秒）
+    </label>
+  </footer>
+
+  <script src="symbols.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

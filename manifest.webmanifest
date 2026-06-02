@@ -1,0 +1,17 @@
+{
+  "name": "ウォッチリスト - 株価指数・為替",
+  "short_name": "ウォッチリスト",
+  "description": "株価指数・為替・商品・債券・仮想通貨の現在値、前日比、前日比%をまとめて表示します。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e1117",
+  "theme_color": "#0e1117",
+  "lang": "ja",
+  "icons": [
+    { "src": "icons/icon192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
