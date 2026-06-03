@@ -187,6 +187,10 @@ body {
 .row.loading .price,
 .row.loading .change { color: var(--text-faint); }
 
+/* 取得失敗時に直近値を保持表示（薄く） */
+.row.stale .price,
+.row.stale .change { opacity: 0.5; }
+
 /* ---- Footer ---- */
 .footer {
   display: flex;

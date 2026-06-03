@@ -1,5 +1,5 @@
 // ウォッチリスト PWA Service Worker
-const CACHE = "watchlist-v3";
+const CACHE = "watchlist-v4";
 const ASSETS = [
   "./",
   "./index.html",

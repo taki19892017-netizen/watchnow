@@ -1,8 +1,11 @@
 "use strict";
 
 const FIELDS = "close,change,change_abs";
-const ENDPOINT = "https://scanner.tradingview.com/symbol";
-const REFRESH_MS = 30000;
+const SYMBOL_ENDPOINT = "https://scanner.tradingview.com/symbol";
+const SCAN_ENDPOINT = "https://scanner.tradingview.com/global/scan";
+const REFRESH_MS = 60000;            // 自動更新の通常間隔（60秒）
+const MAX_BACKOFF_MS = 10 * 60000;   // 取得制限時のバックオフ上限（10分）
+const CONCURRENCY = 5;               // 個別取得フォールバック時の同時実行数
 
 const listEl = document.getElementById("list");
 const updatedEl = document.getElementById("updated");
@@ -10,6 +13,12 @@ const refreshBtn = document.getElementById("refresh");
 const autoToggle = document.getElementById("autoToggle");
 
 let autoTimer = null;
+let isRefreshing = false;
+let backoffMs = 0;        // 現在のバックオフ時間
+let nextAllowedAt = 0;    // この時刻まで自動更新を控える
+let batchEnabled = true;  // まとめ取得を使うか（構造的に失敗し続けたら自動でoff）
+let batchFailStreak = 0;  // まとめ取得の連続失敗回数（CORS/404等の判定用）
+const lastGood = {};      // symbol -> 直近の正常データ（取得失敗時に保持表示）
 
 /* ---------- 描画（行の骨組みを最初に作る） ---------- */
 function rowId(symbol) {
@@ -64,28 +73,62 @@ function escapeHtml(s) {
   }[c]));
 }
 
-/* ---------- 1件分のデータ取得 ---------- */
-async function fetchQuote(symbol) {
-  const url = `${ENDPOINT}?symbol=${encodeURIComponent(symbol)}&fields=${FIELDS}&no_404=true`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error("HTTP " + res.status);
-  return res.json(); // { close, change, change_abs } または null
+/* ---------- データ取得 ---------- */
+// まとめて取得（1リクエストで全銘柄）。これが本命でリクエスト数を最小化する。
+async function fetchBatch(symbols) {
+  let res;
+  try {
+    // Content-Type を付けない＝単純リクエストにして CORS プリフライトを回避する
+    res = await fetch(SCAN_ENDPOINT, {
+      method: "POST",
+      cache: "no-store",
+      body: JSON.stringify({ symbols: { tickers: symbols }, columns: FIELDS.split(",") })
+    });
+  } catch (e) {
+    return { ok: false, rateLimited: false };
+  }
+  if (res.status === 429) return { ok: false, rateLimited: true };
+  if (!res.ok) return { ok: false, rateLimited: false };
+
+  let json;
+  try { json = await res.json(); } catch (e) { return { ok: false, rateLimited: false }; }
+  if (!json || !Array.isArray(json.data)) return { ok: false, rateLimited: false };
+
+  const map = {};
+  for (const row of json.data) {
+    const d = row.d || [];
+    map[row.s] = { close: d[0], change: d[1], change_abs: d[2] };
+  }
+  return { ok: true, map };
 }
 
-function renderRow(symbol, data) {
-  const row = document.getElementById(rowId(symbol));
-  if (!row) return;
-  row.classList.remove("loading");
-
-  const priceEl = row.querySelector(".price");
-  const changeEl = row.querySelector(".change");
-
-  if (!data || data.close == null) {
-    priceEl.innerHTML = '<span class="na">データなし</span>';
-    changeEl.innerHTML = "";
-    return;
+// 個別取得（バッチが使えないときのフォールバック）。同時実行数を絞る。
+async function fetchPerSymbol(symbols) {
+  const map = {};
+  let rateLimited = false;
+  let i = 0;
+  async function worker() {
+    while (i < symbols.length) {
+      const sym = symbols[i++];
+      try {
+        const res = await fetch(
+          `${SYMBOL_ENDPOINT}?symbol=${encodeURIComponent(sym)}&fields=${FIELDS}&no_404=true`,
+          { cache: "no-store" }
+        );
+        if (res.status === 429) { rateLimited = true; continue; }
+        if (!res.ok) continue;
+        map[sym] = await res.json(); // {close,change,change_abs} または null
+      } catch (e) { /* ネットワークエラーは無視（保持表示にまかせる） */ }
+    }
   }
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, symbols.length) }, worker)
+  );
+  return { map, rateLimited };
+}
 
+/* ---------- 描画 ---------- */
+function paintRow(priceEl, changeEl, data) {
   const price = data.close;
   const chgAbs = data.change_abs;
   const chgPct = data.change;
@@ -106,40 +149,117 @@ function renderRow(symbol, data) {
     `<span class="chg-pct ${dir}">${pctStr}</span>`;
 }
 
+// status: 'ok'（取得成功）/ 'nodata'（応答あり・値なし）/ 'fail'（取得失敗=429等）
+function renderRow(symbol, data, status) {
+  const row = document.getElementById(rowId(symbol));
+  if (!row) return;
+  row.classList.remove("loading");
+  const priceEl = row.querySelector(".price");
+  const changeEl = row.querySelector(".change");
+
+  if (status === "ok" && data && data.close != null) {
+    lastGood[symbol] = data;
+    row.classList.remove("stale");
+    paintRow(priceEl, changeEl, data);
+    return;
+  }
+
+  // 取得できなかった場合：直近の正常値があれば保持して薄く表示
+  if (lastGood[symbol]) {
+    row.classList.add("stale");
+    paintRow(priceEl, changeEl, lastGood[symbol]);
+    return;
+  }
+
+  // 一度も取得できていない
+  row.classList.remove("stale");
+  priceEl.innerHTML = (status === "nodata")
+    ? '<span class="na">データなし</span>'
+    : '<span class="na">—</span>';
+  changeEl.innerHTML = "";
+}
+
 /* ---------- 全件更新 ---------- */
-async function refreshAll() {
+async function refreshAll(manual) {
+  if (isRefreshing) return;
+  if (!manual && Date.now() < nextAllowedAt) return; // バックオフ中は自動更新を控える
+
+  isRefreshing = true;
   refreshBtn.classList.add("spinning");
+
   const symbols = WATCHLIST.filter((i) => i.symbol).map((i) => i.symbol);
 
-  await Promise.allSettled(
-    symbols.map(async (sym) => {
-      try {
-        const data = await fetchQuote(sym);
-        renderRow(sym, data);
-      } catch (e) {
-        renderRow(sym, null);
-      }
-    })
-  );
+  let map = null;
+  let rateLimited = false;
 
+  // 1) まとめ取得を優先（使える環境なら1リクエストで完了）
+  if (batchEnabled) {
+    const batch = await fetchBatch(symbols);
+    if (batch.ok) {
+      map = batch.map;
+      batchFailStreak = 0;
+    } else if (batch.rateLimited) {
+      rateLimited = true; // バッチは存在するが制限中。無効化はしない。
+    } else {
+      // CORS非対応・404・ネットワーク等の構造的失敗 → 2回続いたらバッチを使わない
+      if (++batchFailStreak >= 2) batchEnabled = false;
+    }
+  }
+
+  // 2) まとめ取得で取れなければ個別取得にフォールバック
+  if (!map) {
+    const fb = await fetchPerSymbol(symbols);
+    map = fb.map;
+    rateLimited = rateLimited || fb.rateLimited;
+  }
+
+  // 描画
+  let okCount = 0;
+  for (const sym of symbols) {
+    if (map && Object.prototype.hasOwnProperty.call(map, sym)) {
+      const d = map[sym];
+      if (d && d.close != null) { renderRow(sym, d, "ok"); okCount++; }
+      else renderRow(sym, null, "nodata");
+    } else {
+      renderRow(sym, null, "fail");
+    }
+  }
+
+  // 状態表示・バックオフ制御
   const now = new Date();
-  updatedEl.textContent = "更新 " +
-    now.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  if (okCount === 0) {
+    // 全滅（多くは429）→ 次回まで間隔を空ける
+    backoffMs = Math.min(backoffMs ? backoffMs * 2 : REFRESH_MS, MAX_BACKOFF_MS);
+    nextAllowedAt = Date.now() + backoffMs;
+    const sec = Math.round(backoffMs / 1000);
+    updatedEl.textContent = rateLimited
+      ? `⚠ 取得制限中 — ${sec}秒後に再取得`
+      : `⚠ 取得失敗 — ${sec}秒後に再取得`;
+  } else {
+    backoffMs = 0;
+    nextAllowedAt = 0;
+    const t = now.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    updatedEl.textContent = (okCount < symbols.length)
+      ? `更新 ${t}（${okCount}/${symbols.length}）`
+      : `更新 ${t}`;
+  }
+
   refreshBtn.classList.remove("spinning");
+  isRefreshing = false;
 }
 
 /* ---------- 自動更新 ---------- */
 function setAuto(on) {
   if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
-  if (on) autoTimer = setInterval(refreshAll, REFRESH_MS);
+  if (on) autoTimer = setInterval(() => refreshAll(false), REFRESH_MS);
 }
 
-// アプリが裏に回っている間は更新を止め、復帰時に即更新（スマホの電池節約）
+// アプリが裏に回っている間は更新を止め、復帰時に再取得（スマホの電池節約）
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
   } else {
-    refreshAll();
+    refreshAll(false);
     setAuto(autoToggle.checked);
   }
 });
@@ -194,11 +314,11 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ---------- 初期化 ---------- */
-refreshBtn.addEventListener("click", refreshAll);
+refreshBtn.addEventListener("click", () => refreshAll(true)); // 手動更新はバックオフ無視
 autoToggle.addEventListener("change", () => setAuto(autoToggle.checked));
 
 buildSkeleton();
-refreshAll();
+refreshAll(false);
 setAuto(autoToggle.checked);
 
 /* ---------- PWA: Service Worker 登録（ホーム画面追加・オフライン対応） ---------- */
