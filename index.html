@@ -38,6 +38,25 @@
     </label>
   </footer>
 
+  <!-- 月足チャート モーダル -->
+  <div id="chartModal" class="modal" hidden>
+    <div class="modal-head">
+      <div class="modal-title">
+        <span id="chartName"></span>
+        <span id="chartSymbol" class="modal-sym"></span>
+        <span class="modal-tf">月足</span>
+      </div>
+      <div class="modal-head-actions">
+        <a id="chartOpenTV" class="tv-btn" href="#" target="_blank" rel="noopener" title="TradingViewで開く">TV ↗</a>
+        <button id="chartClose" class="modal-close" aria-label="閉じる">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="chartLoading" class="modal-loading">チャートを読み込み中…</div>
+      <iframe id="chartFrame" title="月足チャート" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
+    </div>
+  </div>
+
   <script src="symbols.js"></script>
   <script src="app.js"></script>
 </body>

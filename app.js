@@ -29,6 +29,7 @@ function buildSkeleton() {
     const row = document.createElement("div");
     row.className = "row loading";
     row.id = rowId(item.symbol);
+    row.addEventListener("click", () => openChart(item.symbol, item.name || item.symbol));
     row.innerHTML = `
       <div class="name-cell">
         <div class="name">${escapeHtml(item.name || item.symbol)}</div>
@@ -141,6 +142,69 @@ document.addEventListener("visibilitychange", () => {
     refreshAll();
     setAuto(autoToggle.checked);
   }
+});
+
+/* ---------- 月足チャート モーダル ---------- */
+const modal = document.getElementById("chartModal");
+const chartFrame = document.getElementById("chartFrame");
+const chartName = document.getElementById("chartName");
+const chartSymbol = document.getElementById("chartSymbol");
+const chartLoading = document.getElementById("chartLoading");
+const chartClose = document.getElementById("chartClose");
+const chartOpenTV = document.getElementById("chartOpenTV");
+
+// 埋め込みウィジェットでは表示できない指数を、表示可能な近似シンボルへ変換
+// （株価データ表は正確な元シンボルのまま。チャートのみ差し替える）
+const CHART_SYMBOL_MAP = {
+  "SP:SPX": "OANDA:SPX500USD",      // S&P 500
+  "NASDAQ:NDX": "OANDA:NAS100USD",  // ナスダック100
+  "TVC:DJI": "OANDA:US30USD",       // NYダウ
+  "TVC:NI225": "OANDA:JP225USD"     // 日経平均
+};
+
+function openChart(symbol, name) {
+  const chartSym = CHART_SYMBOL_MAP[symbol] || symbol;
+
+  chartName.textContent = name;
+  chartSymbol.textContent = symbol;
+  chartLoading.style.display = "flex";
+
+  // 「TradingViewで開く」は常に元シンボルでフルチャートを表示
+  chartOpenTV.href = "https://www.tradingview.com/chart/?symbol=" +
+    encodeURIComponent(symbol) + "&interval=1M";
+
+  const params = new URLSearchParams({
+    frameElementId: "tv_chart",
+    symbol: chartSym,
+    interval: "M",          // M = 月足
+    theme: "dark",
+    style: "1",             // ローソク足
+    locale: "ja",
+    timezone: "Asia/Tokyo",
+    withdateranges: "1",
+    hidesidetoolbar: "1",
+    hidetoptoolbar: "0",
+    allow_symbol_change: "0",
+    hideideas: "1",
+    saveimage: "0",
+    toolbarbg: "161b22"
+  });
+  chartFrame.onload = () => { chartLoading.style.display = "none"; };
+  chartFrame.src = "https://s.tradingview.com/widgetembed/?" + params.toString();
+
+  modal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeChart() {
+  modal.hidden = true;
+  chartFrame.src = "about:blank";
+  document.body.style.overflow = "";
+}
+
+chartClose.addEventListener("click", closeChart);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !modal.hidden) closeChart();
 });
 
 /* ---------- 初期化 ---------- */
