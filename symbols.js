@@ -17,7 +17,7 @@ const WATCHLIST = [
   { symbol: "TSE:TOPIX", name: "TOPIX" },
   { symbol: "TVC:NI225", name: "日経平均株価" },
   { symbol: "TSE:7974", name: "任天堂" },
-  { symbol: "TSE:200A", name: "TSE 200A" },
+  { symbol: "TSE:200A", name: "半導体 200A" },
 
   { section: "先物" },
   { symbol: "OSE:NK2251!", name: "日経225先物（大阪）" },
