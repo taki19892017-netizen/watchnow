@@ -1,11 +1,12 @@
 // ウォッチリスト PWA Service Worker
-const CACHE = "watchlist-v2";
+const CACHE = "watchlist-v3";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./symbols.js",
+  "./chart.html",
   "./manifest.webmanifest",
   "./icons/icon192.png",
   "./icons/icon512.png",

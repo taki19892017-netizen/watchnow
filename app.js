@@ -173,24 +173,10 @@ function openChart(symbol, name) {
   chartOpenTV.href = "https://www.tradingview.com/chart/?symbol=" +
     encodeURIComponent(symbol) + "&interval=1M";
 
-  const params = new URLSearchParams({
-    frameElementId: "tv_chart",
-    symbol: chartSym,
-    interval: "M",          // M = 月足
-    theme: "dark",
-    style: "1",             // ローソク足
-    locale: "ja",
-    timezone: "Asia/Tokyo",
-    withdateranges: "1",
-    hidesidetoolbar: "1",
-    hidetoptoolbar: "0",
-    allow_symbol_change: "0",
-    hideideas: "1",
-    saveimage: "0",
-    toolbarbg: "161b22"
-  });
+  // chart.html（TradingView Advanced Chart ウィジェット）を読み込む。
+  // 月足・ローソク足に加え RSI と MACD を表示する。
   chartFrame.onload = () => { chartLoading.style.display = "none"; };
-  chartFrame.src = "https://s.tradingview.com/widgetembed/?" + params.toString();
+  chartFrame.src = "chart.html?symbol=" + encodeURIComponent(chartSym) + "&interval=M";
 
   modal.hidden = false;
   document.body.style.overflow = "hidden";

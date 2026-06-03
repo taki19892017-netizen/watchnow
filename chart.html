@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>チャート</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0e1117; }
+    #tv_chart_container { height: 100vh; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="tv_chart_container"></div>
+  <script src="https://s3.tradingview.com/tv.js"></script>
+  <script>
+    (function () {
+      var q = new URLSearchParams(location.search);
+      var symbol = q.get("symbol") || "FX:USDJPY";
+      var interval = q.get("interval") || "M"; // M = 月足
+      new TradingView.widget({
+        container_id: "tv_chart_container",
+        symbol: symbol,
+        interval: interval,
+        theme: "dark",
+        style: "1",
+        locale: "ja",
+        timezone: "Asia/Tokyo",
+        autosize: true,
+        hide_side_toolbar: true,
+        allow_symbol_change: false,
+        withdateranges: true,
+        studies: ["RSI@tv-basicstudies", "MACD@tv-basicstudies"],
+        toolbar_bg: "#161b22"
+      });
+    })();
+  </script>
+</body>
+</html>
