@@ -267,14 +267,16 @@ document.addEventListener("visibilitychange", () => {
 /* ---------- 月足チャート モーダル ---------- */
 const modal = document.getElementById("chartModal");
 const chartFrame = document.getElementById("chartFrame");
+const chartImgWrap = document.getElementById("chartImgWrap");
+const chartImg = document.getElementById("chartImg");
 const chartName = document.getElementById("chartName");
 const chartSymbol = document.getElementById("chartSymbol");
 const chartLoading = document.getElementById("chartLoading");
 const chartClose = document.getElementById("chartClose");
-const chartOpenTV = document.getElementById("chartOpenTV");
+const chartOpenExt = document.getElementById("chartOpenExt");
+const srcToggle = document.getElementById("srcToggle");
 
-// 埋め込みウィジェットでは表示できない指数を、表示可能な近似シンボルへ変換
-// （株価データ表は正確な元シンボルのまま。チャートのみ差し替える）
+// TradingView 埋め込みで表示できない指数を、表示可能な近似シンボルへ変換
 const CHART_SYMBOL_MAP = {
   "SP:SPX": "OANDA:SPX500USD",      // S&P 500
   "NASDAQ:NDX": "OANDA:NAS100USD",  // ナスダック100
@@ -282,32 +284,79 @@ const CHART_SYMBOL_MAP = {
   "TVC:NI225": "OANDA:JP225USD"     // 日経平均
 };
 
-function openChart(symbol, name) {
-  const chartSym = CHART_SYMBOL_MAP[symbol] || symbol;
+// Stooq で月足チャートを取得できる銘柄（元シンボル → Stooqシンボル）
+const STOOQ_MAP = {
+  "NASDAQ:NDX": "^ndq", "SP:SPX": "^spx", "TVC:DJI": "^dji",
+  "TVC:NI225": "^nkx", "TSE:TOPIX": "^tpx", "BSE:SENSEX": "^snx",
+  "TSE:7974": "7974.jp", "TSE:200A": "200a.jp", "TSE:1694": "1694.jp",
+  "TSE:1543": "1543.jp", "TSE:1692": "1692.jp", "TSE:224A": "224a.jp",
+  "FX:USDJPY": "usdjpy", "TVC:GOLD": "xauusd"
+};
 
+// TradingView では表示できず Stooq なら表示できる銘柄 → 最初から Stooq を表示
+const STOOQ_DEFAULT = new Set([
+  "TSE:7974", "TSE:200A", "TSE:1694", "TSE:1543", "TSE:1692", "TSE:224A",
+  "TSE:TOPIX", "BSE:SENSEX"
+]);
+
+let curSymbol = "";
+
+function openChart(symbol, name) {
+  curSymbol = symbol;
   chartName.textContent = name;
   chartSymbol.textContent = symbol;
-  chartLoading.style.display = "flex";
 
-  // 「TradingViewで開く」は常に元シンボルでフルチャートを表示
-  chartOpenTV.href = "https://www.tradingview.com/chart/?symbol=" +
-    encodeURIComponent(symbol) + "&interval=1M";
-
-  // chart.html（TradingView Advanced Chart ウィジェット）を読み込む。
-  // 月足・ローソク足に加え RSI と MACD を表示する。
-  chartFrame.onload = () => { chartLoading.style.display = "none"; };
-  chartFrame.src = "chart.html?symbol=" + encodeURIComponent(chartSym) + "&interval=M";
+  const hasStooq = !!STOOQ_MAP[symbol];
+  srcToggle.hidden = !hasStooq; // Stooq対応銘柄のみ切替を表示
 
   modal.hidden = false;
   document.body.style.overflow = "hidden";
+
+  // 既定ソースを決定（TVで表示できない銘柄はStooqを優先）
+  showSource((hasStooq && STOOQ_DEFAULT.has(symbol)) ? "stooq" : "tv");
+}
+
+function showSource(src) {
+  // トグルの選択状態を更新
+  for (const b of srcToggle.querySelectorAll(".src-btn")) {
+    b.classList.toggle("active", b.dataset.src === src);
+  }
+  chartLoading.style.display = "flex";
+
+  if (src === "stooq") {
+    const t = STOOQ_MAP[curSymbol];
+    chartFrame.hidden = true;
+    chartFrame.src = "about:blank";
+    chartImgWrap.hidden = false;
+    chartImg.onload = () => { chartLoading.style.display = "none"; };
+    chartImg.onerror = () => { chartLoading.style.display = "none"; };
+    chartImg.src = `https://stooq.com/c/?s=${encodeURIComponent(t)}&c=10y&t=c&a=lg&i=m`;
+    chartOpenExt.textContent = "Stooq ↗";
+    chartOpenExt.href = `https://stooq.com/q/?s=${encodeURIComponent(t)}`;
+  } else {
+    chartImgWrap.hidden = true;
+    chartImg.src = "";
+    chartFrame.hidden = false;
+    const chartSym = CHART_SYMBOL_MAP[curSymbol] || curSymbol;
+    chartFrame.onload = () => { chartLoading.style.display = "none"; };
+    chartFrame.src = "chart.html?symbol=" + encodeURIComponent(chartSym) + "&interval=M";
+    chartOpenExt.textContent = "TV ↗";
+    chartOpenExt.href = "https://www.tradingview.com/chart/?symbol=" +
+      encodeURIComponent(curSymbol) + "&interval=1M";
+  }
 }
 
 function closeChart() {
   modal.hidden = true;
   chartFrame.src = "about:blank";
+  chartImg.src = "";
   document.body.style.overflow = "";
 }
 
+srcToggle.addEventListener("click", (e) => {
+  const btn = e.target.closest(".src-btn");
+  if (btn) showSource(btn.dataset.src);
+});
 chartClose.addEventListener("click", closeChart);
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !modal.hidden) closeChart();
