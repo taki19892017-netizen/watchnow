@@ -326,6 +326,7 @@ body {
 }
 .src-btn + .src-btn { border-left: 1px solid var(--border); }
 .src-btn.active { background: var(--accent); color: #0b1622; }
+.src-toggle[hidden] { display: none; }
 
 .modal-body {
   position: relative;
@@ -334,6 +335,7 @@ body {
 }
 
 /* Stooq 画像チャート */
+.chart-img-wrap[hidden] { display: none; }
 .chart-img-wrap {
   position: absolute;
   inset: 0;
