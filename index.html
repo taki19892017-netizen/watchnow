@@ -58,8 +58,11 @@
       <div id="chartLoading" class="modal-loading">チャートを読み込み中…</div>
       <iframe id="chartFrame" title="月足チャート" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
       <div id="chartImgWrap" class="chart-img-wrap" hidden>
-        <img id="chartImg" alt="月足チャート" />
-        <div class="chart-img-note">Stooq 提供 ・ 月足ローソク足</div>
+        <img id="chartImg" alt="" />
+        <div id="chartImgNote" class="chart-img-note">Stooq 提供 ・ 月足ローソク足</div>
+        <div id="chartImgError" class="chart-img-error" hidden>
+          チャート画像を取得できませんでした。<br />「Stooq ↗」から開いてご確認ください。
+        </div>
       </div>
     </div>
   </div>

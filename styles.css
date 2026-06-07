@@ -358,6 +358,13 @@ body {
   color: var(--text-faint);
   font-size: 12px;
 }
+.chart-img-error {
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+}
+.chart-img-error[hidden] { display: none; }
 .modal-loading {
   position: absolute;
   inset: 0;

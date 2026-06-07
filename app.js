@@ -269,6 +269,8 @@ const modal = document.getElementById("chartModal");
 const chartFrame = document.getElementById("chartFrame");
 const chartImgWrap = document.getElementById("chartImgWrap");
 const chartImg = document.getElementById("chartImg");
+const chartImgNote = document.getElementById("chartImgNote");
+const chartImgError = document.getElementById("chartImgError");
 const chartName = document.getElementById("chartName");
 const chartSymbol = document.getElementById("chartSymbol");
 const chartLoading = document.getElementById("chartLoading");
@@ -324,15 +326,30 @@ function showSource(src) {
   chartLoading.style.display = "flex";
 
   if (src === "stooq") {
+    // Stooqシンボルは ^ や . のみで安全。encodeURIComponent で ^→%5E にすると
+    // Stooq側がチャートを返さない（TOPIX=^tpx 等が表示されない）ため、生で渡す。
     const t = STOOQ_MAP[curSymbol];
     chartFrame.hidden = true;
     chartFrame.src = "about:blank";
     chartImgWrap.hidden = false;
-    chartImg.onload = () => { chartLoading.style.display = "none"; };
-    chartImg.onerror = () => { chartLoading.style.display = "none"; };
-    chartImg.src = `https://stooq.com/c/?s=${encodeURIComponent(t)}&c=10y&t=c&a=lg&i=m`;
+    chartImgError.hidden = true;
+    chartImgNote.hidden = false;
+    chartImg.style.display = "";
+    chartImg.onload = () => {
+      chartLoading.style.display = "none";
+      chartImgError.hidden = true;
+      chartImgNote.hidden = false;
+      chartImg.style.display = "";
+    };
+    chartImg.onerror = () => {
+      chartLoading.style.display = "none";
+      chartImg.style.display = "none";
+      chartImgNote.hidden = true;
+      chartImgError.hidden = false;
+    };
+    chartImg.src = `https://stooq.com/c/?s=${t}&c=10y&t=c&a=lg&i=m`;
     chartOpenExt.textContent = "Stooq ↗";
-    chartOpenExt.href = `https://stooq.com/q/?s=${encodeURIComponent(t)}`;
+    chartOpenExt.href = `https://stooq.com/q/?s=${t}`;
   } else {
     chartImgWrap.hidden = true;
     chartImg.src = "";
