@@ -3,7 +3,7 @@
 const FIELDS = "close,change,change_abs";
 const SYMBOL_ENDPOINT = "https://scanner.tradingview.com/symbol";
 const SCAN_ENDPOINT = "https://scanner.tradingview.com/global/scan";
-const REFRESH_MS = 60000;            // 自動更新の通常間隔（60秒）
+const REFRESH_MS = 5000;             // 自動更新の通常間隔（5秒）
 const MAX_BACKOFF_MS = 10 * 60000;   // 取得制限時のバックオフ上限（10分）
 const CONCURRENCY = 5;               // 個別取得フォールバック時の同時実行数
 
