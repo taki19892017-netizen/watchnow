@@ -7,7 +7,7 @@
 const WATCHLIST = [
   { section: "米国株式" },
   { symbol: "NASDAQ:NDX", name: "ナスダック100" },
-  { symbol: "SP:SPX", name: "S&P 500" },
+  { symbol: "CBOE:SPX", name: "S&P 500" },
   { symbol: "TVC:VIX", name: "VIX 恐怖指数" },
   { symbol: "NASDAQ:SOX", name: "SOX 半導体指数" },
   { symbol: "TVC:RUT", name: "ラッセル2000" },

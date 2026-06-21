@@ -280,7 +280,7 @@ const srcToggle = document.getElementById("srcToggle");
 
 // TradingView 埋め込みで表示できない指数を、表示可能な近似シンボルへ変換
 const CHART_SYMBOL_MAP = {
-  "SP:SPX": "OANDA:SPX500USD",      // S&P 500
+  "CBOE:SPX": "OANDA:SPX500USD",    // S&P 500
   "NASDAQ:NDX": "OANDA:NAS100USD",  // ナスダック100
   "TVC:DJI": "OANDA:US30USD",       // NYダウ
   "TVC:NI225": "OANDA:JP225USD"     // 日経平均
@@ -288,7 +288,7 @@ const CHART_SYMBOL_MAP = {
 
 // Stooq で月足チャートを取得できる銘柄（元シンボル → Stooqシンボル）
 const STOOQ_MAP = {
-  "NASDAQ:NDX": "^ndq", "SP:SPX": "^spx", "TVC:DJI": "^dji",
+  "NASDAQ:NDX": "^ndq", "CBOE:SPX": "^spx", "TVC:DJI": "^dji",
   "TVC:NI225": "^nkx", "TSE:TOPIX": "^tpx", "BSE:SENSEX": "^snx",
   "TSE:7974": "7974.jp", "TSE:200A": "200a.jp", "TSE:1694": "1694.jp",
   "TSE:1543": "1543.jp", "TSE:1692": "1692.jp", "TSE:224A": "224a.jp",
