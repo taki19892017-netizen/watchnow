@@ -292,13 +292,14 @@ const STOOQ_MAP = {
   "TVC:NI225": "^nkx", "TSE:TOPIX": "^tpx", "BSE:SENSEX": "^snx",
   "TSE:7974": "7974.jp", "TSE:200A": "200a.jp", "TSE:1694": "1694.jp",
   "TSE:1543": "1543.jp", "TSE:1692": "1692.jp", "TSE:224A": "224a.jp",
+  "TSE:1632": "1632.jp",
   "FX:USDJPY": "usdjpy", "TVC:GOLD": "xauusd"
 };
 
 // TradingView では表示できず Stooq なら表示できる銘柄 → 最初から Stooq を表示
 const STOOQ_DEFAULT = new Set([
   "TSE:7974", "TSE:200A", "TSE:1694", "TSE:1543", "TSE:1692", "TSE:224A",
-  "TSE:TOPIX", "BSE:SENSEX"
+  "TSE:1632", "TSE:TOPIX", "BSE:SENSEX"
 ]);
 
 let curSymbol = "";
