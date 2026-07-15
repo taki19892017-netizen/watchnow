@@ -58,5 +58,6 @@ const WATCHLIST = [
   { section: "仮想通貨" },
   { symbol: "BITFLYER:XRPJPY", name: "リップル / 円" },
   { symbol: "KRAKEN:ETHJPY", name: "イーサリアム / 円" },
-  { symbol: "BITFLYER:BTCJPY", name: "ビットコイン / 円" }
+  { symbol: "BITFLYER:BTCJPY", name: "ビットコイン / 円" },
+  { symbol: "BINANCE:SOLJPY", name: "ソラナ / 円" }
 ];
