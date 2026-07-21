@@ -7,6 +7,14 @@ const REFRESH_MS = 3000;             // 自動更新の通常間隔（3秒）
 const MAX_BACKOFF_MS = 10 * 60000;   // 取得制限時のバックオフ上限（10分）
 const CONCURRENCY = 5;               // 個別取得フォールバック時の同時実行数
 
+// Yahoo Finance 中継プロキシ（Cloudflare Worker）。デプロイ後の URL を設定。
+// 空文字の場合は Yahoo 補完を行わず、TradingView の値のみを使う。
+const YAHOO_PROXY = "";
+// TradingView で値が固まる銘柄を Yahoo の値で上書きする対応表（元シンボル → Yahooシンボル）
+const YAHOO_MAP = {
+  "TVC:NI225": "^N225"   // 日経平均株価（現物）
+};
+
 const listEl = document.getElementById("list");
 const updatedEl = document.getElementById("updated");
 const refreshBtn = document.getElementById("refresh");
@@ -127,6 +135,28 @@ async function fetchPerSymbol(symbols) {
   return { map, rateLimited };
 }
 
+// Yahoo（中継プロキシ経由）の値で該当銘柄を上書き
+async function applyYahooOverrides(map) {
+  if (!YAHOO_PROXY) return;
+  const ysyms = Object.values(YAHOO_MAP);
+  if (ysyms.length === 0) return;
+  try {
+    const url = YAHOO_PROXY.replace(/\/$/, "") +
+      "/?symbols=" + encodeURIComponent(ysyms.join(","));
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return;
+    const json = await res.json();
+    const data = json && json.data;
+    if (!data) return;
+    for (const [ourSym, ySym] of Object.entries(YAHOO_MAP)) {
+      const d = data[ySym];
+      if (d && d.price != null) {
+        map[ourSym] = { close: d.price, change: d.change, change_abs: d.change_abs };
+      }
+    }
+  } catch (e) { /* プロキシ不通時は TradingView の値のまま */ }
+}
+
 /* ---------- 描画 ---------- */
 function paintRow(priceEl, changeEl, data) {
   const price = data.close;
@@ -212,6 +242,10 @@ async function refreshAll(manual) {
     map = fb.map;
     rateLimited = rateLimited || fb.rateLimited;
   }
+  if (!map) map = {};
+
+  // 3) Yahoo 補完：TradingView で固まる銘柄を Yahoo の値で上書き
+  await applyYahooOverrides(map);
 
   // 描画
   let okCount = 0;

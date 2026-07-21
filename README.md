@@ -39,6 +39,25 @@
 - Stooq対応銘柄ではヘッダーの「**TV / Stooq**」で表示元を切り替えられます。
 - どちらでも表示できない銘柄（VIX・Russell2000・SOX・Nifty・VNINDEXなど）は「**↗**」ボタンからTradingView／Stooqの正式チャートを開けます。
 
+## データ中継プロキシ（Cloudflare Worker／任意）
+一部の銘柄（例：日経225現物 `TVC:NI225`）は TradingView 側のデータが古い値のまま
+固まることがあります。その場合、Yahoo Finance の値で補完できます。
+Yahoo はブラウザから直接取得できない（CORS 非対応）ため、無料の Cloudflare Worker を
+中継として使います。
+
+### デプロイ手順
+1. https://dash.cloudflare.com/ に無料登録・ログイン
+2. 左メニュー「Workers & Pages」→「Create application」→「Create Worker」
+3. 名前を付けて（例：`watchnow-proxy`）「Deploy」
+4. 「Edit code」を開き、`cloudflare-worker.js` の内容を全て貼り付けて「Deploy」
+5. 発行された URL（例：`https://watchnow-proxy.xxxx.workers.dev`）をコピー
+6. 動作確認：ブラウザで `https://watchnow-proxy.xxxx.workers.dev/?symbols=^N225` を開き、
+   `{"data":{"^N225":{"price":...}}}` のような JSON が返れば成功
+7. `app.js`（Web）と `popup.js`（拡張機能）の `const YAHOO_PROXY = ""` に、コピーした URL を設定
+
+`YAHOO_PROXY` が空文字の間は補完は行われず、TradingView の値のみを使います。
+補完対象の銘柄は `YAHOO_MAP`（元シンボル → Yahooシンボル）で調整できます。
+
 ## データについて
 - 取得元: TradingView（`scanner.tradingview.com`）
 - 表示が遅延する場合や、取引所がデータを配信していない銘柄は「データなし」と表示されます。
